@@ -7,6 +7,19 @@ from flask import Flask, request, jsonify
 from slack_sdk.rtm import RTMClient
 from slack_sdk.web import WebClient
 
+
+
+TRIGGER_WORD = (
+    "Вопрос решён",
+    "Вопрос решен",
+    "вопрос решён",
+    "вопрос решен",
+    "Вопрос решён!",
+    "Вопрос решен!",
+    "вопрос решён!",
+    "вопрос решен!",
+)
+
 app = Flask(__name__)
 SQL_ADRES = os.getenv("SQL_ADRES")
 SQL_USER = os.getenv("SQL_USER")
@@ -39,22 +52,12 @@ def slack_events():
         challenge = data.get("challenge")
         return jsonify({"challenge": challenge})
 
-    # if event.get("type") == "message" and not event.get("bot_id") and event.get("channel_type") == "im":
-    #     user = event.get("user")
-    #     text = event.get("text")
-
-        #cursor.execute("INSERT INTO message (user, message) VALUES (?, ?)", (user, text))
-        #conn.commit()
-
-        #return "Message received", 200
 
     return "OK", 200
 
 
 if __name__ == "__main__":
     app.run(port=3001)
-
-TRACKED_WORD = "Вопрос решён"
 
 load_dotenv('key.env')
 
