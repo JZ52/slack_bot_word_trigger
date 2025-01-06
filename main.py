@@ -69,26 +69,36 @@ def slack_events():
         response = slack_client.users_info(user=user_id)
         user_name = response['user']['real_name']
 
-        if any(word in data['event']['text'] for word in TRIGGER_WORD):
+        channel_info = slack_client.conversations_info(channel=channel_id)
+        channel_name = channel_info['channel']['name']
+
+        original_ts = data['event'].get('thread_ts', timestamp)
+
+        replies = slack_client.conversations_replies(channel=channel_id, ts=original_ts)
+        original_message = replies['messages'][0]['text']
+
+        if any(word in message_text for word in TRIGGER_WORD):
             try:
-                slack_client.reactions_add(channel = channel_id, timestamp = timestamp, name = "white_check_mark")
                 response = slack_client.reactions_add(
-                    channel= data['event']['channel'],
+                    channel= channel_id,
                     name = "white_check_mark",
-                    timestamp = data['event']['ts']
+                    timestamp = original_ts
+                )
+
+                unix_time = float(timestamp)
+                date_normal = datetime.fromtimestamp(unix_time).strftime("%d.%m.%Y %H:%M")
+
+                print(
+                    f"Оригинальное сообщение: {original_message}\n"
+                    f"Триггерное сообщение: {message_text}\n"
+                    f"Пользователь: {user_name}\n"
+                    f"Канал: {channel_name}\n"
+                    f"Дата: {date_normal}\n"
                 )
 
             except SlackApiError as e:
                 if e.response['error'] == 'already_reacted':
                     print(f"Реакция добавлена к сообщению от { user_name }")
-                    unix_time = float(timestamp)
-                    date_normal = datetime.fromtimestamp(unix_time).strftime("%d-%m-%Y %H:%M:%S")
-                    print(
-                        f"{data['event']['text']}\n"
-                        f"{user_id}\n"
-                        f"{channel_id}\n"
-                        f"{date_normal}\n"
-                    )
                 else:
                     print(f"Ошибка { e.response['error'] }")
         return jsonify({"status" : "ok"})
