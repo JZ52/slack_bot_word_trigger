@@ -67,3 +67,9 @@ def insert_message(original_message, original_user_name, user_name, channel_name
         cursor.close()
         connection.close()
         print("Сообщение добавлено")
+
+
+def load_users(file_path):
+    with open(file_path, "r", encoding='utf-8') as file:
+        user = {line.strip().lower() for line in file}
+    return user

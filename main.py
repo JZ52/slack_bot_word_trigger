@@ -6,7 +6,7 @@ from slack_sdk.rtm import RTMClient
 from slack_sdk.web import WebClient
 from slack_sdk.errors import SlackApiError
 from datetime import datetime
-from models import create_table, insert_message
+from models import create_table, insert_message, load_users
 
 load_dotenv('key.env')
 
@@ -26,7 +26,9 @@ app = Flask(__name__)
 SLACK_TOKEN = os.getenv("BOT_USER_OAUTH_TOKEN")
 rtm_client = RTMClient(token=SLACK_TOKEN)
 slack_client = WebClient(token=SLACK_TOKEN)
-USER = "user.txt"
+USER_FILE = "user.txt"
+
+AUTHORIZED_USERS = load_users(USER_FILE)
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
@@ -60,9 +62,8 @@ def slack_events():
 
 
         if any(word in message_text for word in TRIGGER_WORD):
-            with open(USER, "r", encoding='utf-8') as users:
-                for user in users:
-                    if user_name in user:
+                    print(AUTHORIZED_USERS)
+                    if user_name.lower() in AUTHORIZED_USERS:
                         try:
                             response = slack_client.reactions_add(
                                 channel= channel_id,
