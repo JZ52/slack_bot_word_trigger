@@ -1,13 +1,12 @@
 import os
 import json
-import psycopg2
-from psycopg2 import OperationalError
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from slack_sdk.rtm import RTMClient
 from slack_sdk.web import WebClient
 from slack_sdk.errors import SlackApiError
 from datetime import datetime
+from models import create_table, insert_message
 
 load_dotenv('key.env')
 
@@ -23,32 +22,10 @@ TRIGGER_WORD = (
 )
 
 app = Flask(__name__)
-SQL_ADRES = os.getenv("SQL_ADRES")
-SQL_USER = os.getenv("SQL_USER")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD")
-SQL_DATABASE = os.getenv("SQL_DATABASE")
-SQL_PORT = os.getenv("SQL_PORT")
 
 SLACK_TOKEN = os.getenv("BOT_USER_OAUTH_TOKEN")
 rtm_client = RTMClient(token=SLACK_TOKEN)
 slack_client = WebClient(token=SLACK_TOKEN)
-
-
-
-try:
-    connection = psycopg2.connect(
-        host = SQL_ADRES,
-        user = SQL_USER,
-        password =  SQL_PASSWORD,
-        database = SQL_DATABASE,
-        port = SQL_PORT,
-        client_encoding = 'UTF8'
-    )
-
-    cursor = connection.cursor()
-    print("Успешное подключение к базе данных")
-except OperationalError as e:
-    print(f"Ошибка подключения: {e}")
 
 
 @app.route("/slack/events", methods=["POST"])
@@ -101,6 +78,8 @@ def slack_events():
                     f"Дата: {date_normal}\n"
                 )
 
+                insert_message(original_message, original_user_name, user_name, channel_name, date_normal)
+
             except SlackApiError as e:
                 if e.response['error'] == 'already_reacted':
                     print(f"Реакция добавлена к сообщению от { user_name }")
@@ -109,4 +88,5 @@ def slack_events():
         return jsonify({"status" : "ok"})
 
 if __name__ == "__main__":
+    create_table()
     app.run(port=3001)
