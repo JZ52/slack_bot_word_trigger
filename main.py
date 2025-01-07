@@ -26,7 +26,7 @@ app = Flask(__name__)
 SLACK_TOKEN = os.getenv("BOT_USER_OAUTH_TOKEN")
 rtm_client = RTMClient(token=SLACK_TOKEN)
 slack_client = WebClient(token=SLACK_TOKEN)
-
+USER = "user.txt"
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
@@ -60,31 +60,36 @@ def slack_events():
 
 
         if any(word in message_text for word in TRIGGER_WORD):
-            try:
-                response = slack_client.reactions_add(
-                    channel= channel_id,
-                    name = "white_check_mark",
-                    timestamp = original_ts
-                )
+            with open(USER, "r", encoding='utf-8') as users:
+                for user in users:
+                    if user_name in user:
+                        try:
+                            response = slack_client.reactions_add(
+                                channel= channel_id,
+                                name = "white_check_mark",
+                                timestamp = original_ts
+                                )
 
-                unix_time = float(timestamp)
-                date_normal = datetime.fromtimestamp(unix_time).strftime("%d.%m.%Y %H:%M")
+                            unix_time = float(timestamp)
+                            date_normal = datetime.fromtimestamp(unix_time).strftime("%d.%m.%Y %H:%M")
 
-                print(
-                    f"Оригинальное сообщение: {original_message}\n"
-                    f"Автор оригинального сообщения: {original_user_name}\n"
-                    f"Кто решил: {user_name}\n"
-                    f"Канал: {channel_name}\n"
-                    f"Дата: {date_normal}\n"
-                )
+                            print(
+                                f"Оригинальное сообщение: {original_message}\n"
+                                f"Автор оригинального сообщения: {original_user_name}\n"
+                                f"Кто решил: {user_name}\n"
+                                f"Канал: {channel_name}\n"
+                                f"Дата: {date_normal}\n"
+                                )
 
-                insert_message(original_message, original_user_name, user_name, channel_name, date_normal)
+                            insert_message(original_message, original_user_name, user_name, channel_name, date_normal)
 
-            except SlackApiError as e:
-                if e.response['error'] == 'already_reacted':
-                    print(f"Реакция добавлена к сообщению от { user_name }")
-                else:
-                    print(f"Ошибка { e.response['error'] }")
+                        except SlackApiError as e:
+                            if e.response['error'] == 'already_reacted':
+                                print(f"Реакция добавлена к сообщению от { user_name }")
+                            else:
+                                print(f"Ошибка { e.response['error'] }")
+                    else:
+                        print(f"Пользователь { user_name }  не технический специалист")
         return jsonify({"status" : "ok"})
 
 if __name__ == "__main__":
