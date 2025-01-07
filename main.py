@@ -1,7 +1,7 @@
 import os
 import json
-# import psycopg2
-# from psycopg2 import OperationalError
+import psycopg2
+from psycopg2 import OperationalError
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from slack_sdk.rtm import RTMClient
@@ -23,11 +23,11 @@ TRIGGER_WORD = (
 )
 
 app = Flask(__name__)
-# SQL_ADRES = os.getenv("SQL_ADRES")
-# SQL_USER = os.getenv("SQL_USER")
-# SQL_PASSWORD = os.getenv("SQL_PASSWORD")
-# SQL_DATABASE = os.getenv("SQL_DATABASE")
-# SQL_PORT = os.getenv("SQL_PORT")
+SQL_ADRES = os.getenv("SQL_ADRES")
+SQL_USER = os.getenv("SQL_USER")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+SQL_DATABASE = os.getenv("SQL_DATABASE")
+SQL_PORT = os.getenv("SQL_PORT")
 
 SLACK_TOKEN = os.getenv("BOT_USER_OAUTH_TOKEN")
 rtm_client = RTMClient(token=SLACK_TOKEN)
@@ -35,20 +35,20 @@ slack_client = WebClient(token=SLACK_TOKEN)
 
 
 
-# try:
-#     connection = psycopg2.connect(
-#         host = SQL_ADRES,
-#         user = SQL_USER,
-#         password =  SQL_PASSWORD,
-#         database = SQL_DATABASE,
-#         port = SQL_PORT,
-#         client_encoding = 'UTF8'
-#     )
-#
-#     cursor = connection.cursor()
-#     print("Успешное подключение к базе данных")
-# except OperationalError as e:
-#     print(f"Ошибка подключения: {e}")
+try:
+    connection = psycopg2.connect(
+        host = SQL_ADRES,
+        user = SQL_USER,
+        password =  SQL_PASSWORD,
+        database = SQL_DATABASE,
+        port = SQL_PORT,
+        client_encoding = 'UTF8'
+    )
+
+    cursor = connection.cursor()
+    print("Успешное подключение к базе данных")
+except OperationalError as e:
+    print(f"Ошибка подключения: {e}")
 
 
 @app.route("/slack/events", methods=["POST"])
@@ -75,7 +75,12 @@ def slack_events():
         original_ts = data['event'].get('thread_ts', timestamp)
 
         replies = slack_client.conversations_replies(channel=channel_id, ts=original_ts)
-        original_message = replies['messages'][0]['text']
+        original_message_data = replies['messages'][0]
+        original_message = original_message_data['text']
+        original_user_id = original_message_data['user']
+        original_user_info = slack_client.users_info(user = original_user_id)
+        original_user_name = original_user_info['user']['real_name']
+
 
         if any(word in message_text for word in TRIGGER_WORD):
             try:
@@ -90,8 +95,8 @@ def slack_events():
 
                 print(
                     f"Оригинальное сообщение: {original_message}\n"
-                    f"Триггерное сообщение: {message_text}\n"
-                    f"Пользователь: {user_name}\n"
+                    f"Автор оригинального сообщения: {original_user_name}\n"
+                    f"Кто решил: {user_name}\n"
                     f"Канал: {channel_name}\n"
                     f"Дата: {date_normal}\n"
                 )
