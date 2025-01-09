@@ -10,16 +10,7 @@ from models import create_table, insert_message, load_users
 
 load_dotenv('key.env')
 
-TRIGGER_WORD = (
-    "Вопрос решён",
-    "Вопрос решен",
-    "вопрос решён",
-    "вопрос решен",
-    "Вопрос решён!",
-    "Вопрос решен!",
-    "вопрос решён!",
-    "вопрос решен!",
-)
+TRIGGER_EMOJI = ":slack:"
 
 app = Flask(__name__)
 
@@ -61,8 +52,7 @@ def slack_events():
         original_user_name = original_user_info['user']['real_name']
 
 
-        if any(word in message_text for word in TRIGGER_WORD):
-                    print(AUTHORIZED_USERS)
+        if TRIGGER_EMOJI in message_text:
                     if user_name.lower() in AUTHORIZED_USERS:
                         try:
                             response = slack_client.reactions_add(
