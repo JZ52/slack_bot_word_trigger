@@ -18,6 +18,7 @@ TRIGGER_EMOJI = "slack"
 app = Flask(__name__)
 
 SLACK_TOKEN = os.getenv("BOT_USER_OAUTH_TOKEN")
+BOT_USER_ID = os.getenv("BOT_USER_ID")  # добавим переменную для игнорирования самого бота
 slack_client = WebClient(token=SLACK_TOKEN)
 
 USER_FILE = "user.txt"
@@ -32,7 +33,7 @@ def get_channel_name(channel_id):
         return response['channel']['name']
     except SlackApiError as e:
         logging.error(f"Ошибка при получении имени канала: {e.response['error']}")
-        return channel_id  # Если не смогли получить имя, возвращаем просто ID
+        return channel_id  # Вернём ID, если имя не получилось достать
 
 
 @app.route("/slack/events", methods=["POST"])
@@ -48,31 +49,31 @@ def slack_events():
             return jsonify({"status": "ignored"})
 
         event = data['event']
-        reaction = event['reaction']
-        user_id = event['user']
-        channel_id = event['item']['channel']
-        message_ts = event['item']['ts']
+        reaction = event.get('reaction')
+        user_id = event.get('user')
+        channel_id = event['item'].get('channel')
+        message_ts = event['item'].get('ts')
 
         logging.info(f"Получена реакция '{reaction}' от пользователя {user_id} на сообщение {message_ts}")
 
-        # Проверяем, является ли это тредом (если есть thread_ts и он не совпадает с message_ts)
-        if 'thread_ts' in event and event['thread_ts'] != message_ts:
-            logging.info(f"Реакция поставлена в треде — пропускаем (ts={message_ts})")
-            return jsonify({"status": "ok"})
-
+        # Реакция должна быть именно та, что указана в TRIGGER_EMOJI
         if reaction != TRIGGER_EMOJI:
-            logging.info(f"Реакция '{reaction}' не является триггерной, пропускаем")
+            logging.info(f"Реакция '{reaction}' не соответствует триггеру '{TRIGGER_EMOJI}', пропускаем")
             return jsonify({"status": "ok"})
 
         # Получаем информацию о пользователе, который поставил реакцию
         user_info = slack_client.users_info(user=user_id)
         user_name = user_info['user']['real_name']
 
+        if user_id == BOT_USER_ID:
+            logging.info(f"Бот поставил реакцию, игнорируем.")
+            return jsonify({"status": "ok"})
+
         if user_name.lower() not in AUTHORIZED_USERS:
             logging.info(f"Пользователь {user_name} не авторизован для отметок")
             return jsonify({"status": "ok"})
 
-        # Получаем оригинальное сообщение
+        # Получаем оригинальное сообщение (проверим — это тред или нет)
         history = slack_client.conversations_history(
             channel=channel_id,
             latest=message_ts,
@@ -88,11 +89,21 @@ def slack_events():
         original_message_text = original_message_data.get('text', '')
         original_user_id = original_message_data.get('user', '')
 
-        # Получаем имя автора оригинального сообщения
+        # Проверка на то, что это ответ в треде (не главное сообщение)
+        if 'thread_ts' in original_message_data and original_message_data['thread_ts'] != message_ts:
+            logging.info(f"Сообщение {message_ts} является ответом в треде, пропускаем")
+            return jsonify({"status": "ok"})
+
+        # Игнорируем реакции на сообщения самого бота
+        if original_user_id == BOT_USER_ID:
+            logging.info(f"Сообщение, на которое поставили реакцию, отправил бот, пропускаем")
+            return jsonify({"status": "ok"})
+
+        # Получаем имя автора сообщения
         original_user_info = slack_client.users_info(user=original_user_id)
         original_user_name = original_user_info['user']['real_name']
 
-        # Ставим галочку, если её ещё нет
+        # Добавляем галочку, если её ещё нет
         try:
             slack_client.reactions_add(
                 channel=channel_id,
@@ -101,7 +112,7 @@ def slack_events():
             )
         except SlackApiError as e:
             if e.response['error'] == 'already_reacted':
-                logging.info("Галочка уже стоит, пропускаем")
+                logging.info("Галочка уже стоит, пропускаем добавление")
             else:
                 logging.error(f"Ошибка при добавлении реакции: {e.response['error']}")
                 return jsonify({"status": "error"})
