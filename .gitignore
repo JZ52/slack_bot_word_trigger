@@ -2,3 +2,7 @@ key.env
 pyvenv.cfg
 user.txt
 test.py
+.idea
+.venv
+Include
+Lib
