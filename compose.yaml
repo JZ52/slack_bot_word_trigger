@@ -1,0 +1,56 @@
+services:
+  database:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${SQL_DATABASE}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d $${POSTGRES_DB}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    restart: unless-stopped
+    init: true
+
+    env_file:
+      - key.env
+
+    environment:
+      SQL_ADRES: database
+      SQL_PORT: "5432"
+
+    depends_on:
+      database:
+        condition: service_healthy
+
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
