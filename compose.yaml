@@ -3,9 +3,9 @@ services:
     image: postgres:17-bookworm
     restart: unless-stopped
 
-  environment:
-    POSTGRES_DB: ${SQL_DATABASE:?SQL_DATABASE is required}
-    POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
+    environment:
+      POSTGRES_DB: ${SQL_DATABASE:?SQL_DATABASE is required}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -34,7 +34,7 @@ services:
 
     restart: unless-stopped
     init: true
-    
+
     environment:
       SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:?SLACK_APP_TOKEN is required}
       BOT_USER_OAUTH_TOKEN: ${BOT_USER_OAUTH_TOKEN:?BOT_USER_OAUTH_TOKEN is required}
