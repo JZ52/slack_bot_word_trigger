@@ -1,0 +1,15 @@
+.git
+.github
+
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.log
+
+key.env
+.env
+
+.vscode
+.idea
+.pytest_cache
