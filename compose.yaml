@@ -3,9 +3,9 @@ services:
     image: postgres:17-bookworm
     restart: unless-stopped
 
-    environment:
-      POSTGRES_DB: ${SQL_DATABASE}
-      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+  environment:
+    POSTGRES_DB: ${SQL_DATABASE:?SQL_DATABASE is required}
+    POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?POSTGRES_ADMIN_PASSWORD is required}
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -34,13 +34,18 @@ services:
 
     restart: unless-stopped
     init: true
-
-    env_file:
-      - key.env
-
+    
     environment:
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:?SLACK_APP_TOKEN is required}
+      BOT_USER_OAUTH_TOKEN: ${BOT_USER_OAUTH_TOKEN:?BOT_USER_OAUTH_TOKEN is required}
+      ADMIN_CHANNEL_ID: ${ADMIN_CHANNEL_ID:?ADMIN_CHANNEL_ID is required}
+      emoji: ${emoji:?emoji is required}
+
       SQL_ADRES: database
       SQL_PORT: "5432"
+      SQL_DATABASE: ${SQL_DATABASE:?SQL_DATABASE is required}
+      SQL_USER: ${SQL_USER:?SQL_USER is required}
+      SQL_PASSWORD: ${SQL_PASSWORD:?SQL_PASSWORD is required}
 
     depends_on:
       database:
